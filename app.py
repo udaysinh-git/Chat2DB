@@ -190,8 +190,8 @@ def get_response(user_query, db, chat_history):
     prompt = ChatPromptTemplate.from_template(template)
     
     # Use Groq model for response generation
-    llm = ChatGroq(model="mistral-saba-24b", temperature=0)
-    
+    # llm = ChatGroq(model="mistral-saba-24b", temperature=0)
+    llm = ChatGroq(model="llama-3.1-8b-instant", temperature=0)
     # Create a safe query function specifically for this chain
     def safe_db_run(vars):
         try:
