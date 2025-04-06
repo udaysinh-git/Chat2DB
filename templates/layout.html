@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with MySQL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
+    <!-- Add Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css" rel="stylesheet">
+    <!-- Add Marked.js for markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js"></script>
+    <!-- Add animation library -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f9f9f9;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 180px);
+        }
+        .sidebar {
+            background-color: #f0f0f0;
+            border-right: 1px solid #ddd;
+            padding: 15px;
+            height: 100%;
+            overflow-y: auto;
+        }
+        .messages-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .message {
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            max-width: 80%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            animation-duration: 0.5s;
+        }
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .user-message {
+            background-color: #e3f2fd;
+            margin-left: auto;
+        }
+        .ai-message {
+            background-color: #f0f0f0;
+            margin-right: auto;
+            max-width: 85%;
+        }
+        .input-area {
+            border-top: 1px solid #ddd;
+            padding: 15px;
+            background-color: #fff;
+        }
+        .form-control:focus {
+            box-shadow: none;
+            border-color: #ced4da;
+        }
+        .typing-indicator {
+            display: none;
+            margin-bottom: 15px;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #888;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: typing 1s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        @keyframes typing {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+        .connection-form {
+            padding: 15px;
+        }
+        
+        /* New styles for SQL responses */
+        .ai-message pre {
+            background-color: #272822;
+            border-radius: 5px;
+            padding: 10px;
+            color: #f8f8f2;
+            overflow-x: auto;
+            margin-top: 8px;
+        }
+        
+        .ai-message code {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .sql-result-table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+            font-size: 0.9em;
+        }
+        
+        .sql-result-table th {
+            background-color: #4b6584;
+            color: white;
+            padding: 8px;
+            text-align: left;
+            font-weight: 500;
+        }
+        
+        .sql-result-table td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .sql-result-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .sql-result-table tr:hover {
+            background-color: #dfe6e9;
+        }
+        
+        .sql-query-box {
+            background-color: #f8f9fa;
+            border-left: 3px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .message-content {
+            line-height: 1.5;
+        }
+        
+        /* Format markdown-style elements */
+        .ai-message h1, .ai-message h2, .ai-message h3, 
+        .ai-message h4, .ai-message h5, .ai-message h6 {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .ai-message ul, .ai-message ol {
+            padding-left: 20px;
+        }
+        
+        .ai-message blockquote {
+            border-left: 4px solid #ccc;
+            margin-left: 0;
+            padding-left: 16px;
+            color: #6c757d;
+        }
+        
+        /* Enhanced table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 0.9em;
+            font-family: sans-serif;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+
+        table thead tr {
+            background-color: #4b6584;
+            color: #ffffff;
+            text-align: left;
+        }
+
+        table th,
+        table td {
+            padding: 12px 15px;
+        }
+
+        table tbody tr {
+            border-bottom: 1px solid #dddddd;
+        }
+
+        table tbody tr:nth-of-type(even) {
+            background-color: #f3f3f3;
+        }
+
+        table tbody tr:last-of-type {
+            border-bottom: 2px solid #4b6584;
+        }
+        
+        .message-content pre {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        /* Animation styles */
+        .message {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            animation-duration: 0.5s;
+        }
+        
+        .message.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Message typing animation */
+        .typing-bounce {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #888;
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: typing-bounce 0.8s infinite ease-in-out;
+        }
+        
+        .typing-bounce:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-bounce:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing-bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+        }
+        
+        /* Enhance code blocks */
+        pre {
+            position: relative;
+            padding-top: 2.5rem !important;
+            margin: 1rem 0;
+            border-radius: 6px;
+            background: #272822;
+            max-height: 500px;
+            overflow: auto;
+        }
+        
+        pre::before {
+            content: "SQL Query";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.3);
+            color: #f8f8f2;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.75rem;
+            font-family: sans-serif;
+        }
+        
+        /* Improve table styling */
+        .markdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: auto;
+            display: block;
+            max-height: 400px;
+        }
+        
+        .markdown-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        
+        .markdown-table th {
+            background-color: #4b6584 !important;
+            color: white;
+            padding: 12px 15px;
+            position: relative;
+        }
+        
+        /* JSON formatting */
+        .json-block {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            border-radius: 5px;
+            padding: 1rem;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        
+        .json-key {
+            color: #f8c555;
+        }
+        
+        .json-value {
+            color: #7ec699;
+        }
+        
+        .json-string {
+            color: #cc99cd;
+        }
+        
+        /* Typewriter effect for AI responses */
+        .typewriter-text {
+            overflow: hidden;
+            border-right: 2px solid #666;
+            white-space: nowrap;
+            margin: 0;
+            animation: typing 3.5s steps(40, end), blink-caret 0.75s step-end infinite;
+            display: inline-block;
+        }
+        
+        @keyframes typing {
+            from { width: 0 }
+            to { width: 100% }
+        }
+        
+        @keyframes blink-caret {
+            from, to { border-color: transparent }
+            50% { border-color: #666 }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">Chat with MySQL</span>
+        </div>
+    </nav>
+    
+    {% block content %}{% endblock %}
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Add Prism.js for syntax highlighting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    
+    <script>
+        // Configure marked.js options
+        marked.setOptions({
+            highlight: function(code, language) {
+                if (Prism.languages[language]) {
+                    return Prism.highlight(code, Prism.languages[language], language);
+                }
+                return code;
+            },
+            breaks: true,
+            gfm: true
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesContainer = document.querySelector('.messages-container');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Apply animations to existing messages
+                document.querySelectorAll('.message').forEach(function(msg, index) {
+                    setTimeout(function() {
+                        msg.classList.add('show');
+                    }, 100 * index);
+                });
+                
+                // Apply syntax highlighting
+                Prism.highlightAll();
+            }
+            
+            htmx.on("htmx:afterRequest", function(evt) {
+                if (evt.detail.target.id === "chat-form") {
+                    document.getElementById('message-input').value = '';
+                    const messagesContainer = document.querySelector('.messages-container');
+                    if (messagesContainer) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                }
+            });
+            
+            // Initialize Prism.js for any existing code blocks
+            Prism.highlightAll();
+        });
+        
+        // Function to format SQL response content
+        function formatSQLResponse(content) {
+            // Process SQL code blocks
+            content = content.replace(/```sql([\s\S]*?)```/g, '<pre><code class="language-sql">$1</code></pre>');
+            
+            // Process regular code blocks
+            content = content.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+            
+            // Process inline code
+            content = content.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            return content;
+        }
+        
+        // Function to process markdown tables to HTML
+        function processMarkdownTable(tableText) {
+            const lines = tableText.trim().split('\n');
+            let html = '<table>';
+            
+            // Process header row
+            if (lines.length > 0) {
+                const headerCells = lines[0].split('|').filter(cell => cell.trim() !== '');
+                html += '<thead><tr>';
+                headerCells.forEach(cell => {
+                    html += `<th>${cell.trim()}</th>`;
+                });
+                html += '</tr></thead>';
+            }
+            
+            // Skip the separator line (line 1)
+            
+            // Process data rows
+            if (lines.length > 2) {
+                html += '<tbody>';
+                for (let i = 2; i < lines.length; i++) {
+                    const rowCells = lines[i].split('|').filter(cell => cell.trim() !== '');
+                    html += '<tr>';
+                    rowCells.forEach(cell => {
+                        html += `<td>${cell.trim()}</td>`;
+                    });
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+            }
+            
+            html += '</table>';
+            return html;
+        }
+        
+        // Format JSON strings for better display
+        function formatJSON(jsonString) {
+            try {
+                // Parse the JSON string
+                const obj = JSON.parse(jsonString);
+                
+                // Convert back to formatted string with indentation
+                const formatted = JSON.stringify(obj, null, 2);
+                
+                // Apply syntax highlighting with colors
+                return formatted.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, 
+                    function (match) {
+                        let cls = 'json-value';
+                        if (/^"/.test(match)) {
+                            if (/:$/.test(match)) {
+                                cls = 'json-key';
+                            } else {
+                                cls = 'json-string';
+                            }
+                        }
+                        return '<span class="' + cls + '">' + match + '</span>';
+                    });
+            } catch (e) {
+                // If not valid JSON, return the original string
+                return jsonString;
+            }
+        }
+    </script>
+</body>
+</html>
