@@ -1,0 +1,17 @@
+[project]
+name = "chat2db"
+version = "0.1.0"
+description = "Gossip with your database instead of writing cryptic SQL. It's less judgmental about your queries, probably. Tell your data what you want!"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-community>=0.3.21",
+    "langchain-core>=0.3.51",
+    "langchain-groq>=0.3.2",
+    "langchain-openai>=0.3.12",
+    "mysql-connector-python>=9.2.0",
+    "pyautogen>=0.8.5",
+    "python-dotenv>=1.1.0",
+    "spider-env>=0.0.1",
+    "streamlit>=1.44.1",
+]
