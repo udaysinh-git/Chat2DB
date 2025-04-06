@@ -57,7 +57,8 @@
                 </div>
                 
                 <div class="input-area">
-                    <form id="chat-form" hx-post="/chat" hx-swap="none" hx-indicator="#typing-indicator">
+                    <!-- Fix: Remove hx-indicator to avoid conflicts with our custom approach -->
+                    <form id="chat-form" hx-post="/chat" hx-swap="none">
                         <div class="input-group">
                             <input type="text" id="message-input" name="message" class="form-control" placeholder="Type your message..." required>
                             <button class="btn btn-primary" type="submit">Send</button>
@@ -107,9 +108,15 @@
         });
     }
 
+    // Track the current message to maintain context between request and response
+    let currentUserQuery = "";
+
     htmx.on("htmx:beforeRequest", function(evt) {
         if (evt.detail.target.id === "chat-form") {
             const message = document.getElementById('message-input').value;
+            
+            // Store the message for later reference
+            currentUserQuery = message;
             
             // Add user message to UI immediately with animation
             const userMessageHtml = `
@@ -127,8 +134,9 @@
                 messagesDiv.lastElementChild.classList.add('show');
             }, 10);
             
-            // Show typing indicator
-            document.getElementById('typing-indicator').style.display = 'block';
+            // Show skeleton loader
+            document.getElementById('typing-indicator').style.display = 'none';
+            messagesDiv.insertAdjacentHTML('beforeend', createSkeletonLoader());
             
             // Scroll to bottom
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -140,28 +148,41 @@
     
     htmx.on("htmx:afterRequest", function(evt) {
         if (evt.detail.target.id === "chat-form") {
-            // Hide typing indicator
+            // Hide typing indicator just in case
             document.getElementById('typing-indicator').style.display = 'none';
             
-            // Check if response was successful
+            // Remove skeleton loader
+            const skeletonElement = document.querySelector('.skeleton-container');
+            if (skeletonElement) {
+                skeletonElement.remove();
+            }
+            
+            // DEBUG: Log the raw response to see if it's coming through
+            console.log("Raw response:", evt.detail.xhr.responseText);
+            
             try {
+                // Parse the JSON response
                 const response = JSON.parse(evt.detail.xhr.responseText);
+                console.log("Parsed response:", response);
                 
                 if (response.success) {
-                    // Process and format the response content
+                    // Use the stored user query instead of trying to find it in the DOM
+                    const originalQuery = currentUserQuery || "Unknown query";
+                    
+                    // Process the response message
                     let formattedMessage = response.message;
                     
-                    // Process any JSON content first
-                    formattedMessage = processJSONContent(formattedMessage);
-                    
-                    // Render markdown
-                    const renderedContent = renderMarkdown(formattedMessage);
-                    
-                    // Create AI message element with animation
+                    // Create the AI message container first 
                     const aiMessageHtml = `
                     <div class="message ai-message">
                         <div class="message-header">AI:</div>
-                        <div class="message-content rendered-markdown">${renderedContent}</div>
+                        <div class="message-content">
+                            <div class="query-display">Query: "${originalQuery}"</div>
+                            <div class="ai-response"></div>
+                        </div>
+                        <div class="typewriter-controls">
+                            <button class="btn btn-sm btn-outline-secondary skip-typewriter">Skip</button>
+                        </div>
                     </div>
                     `;
                     
@@ -170,22 +191,46 @@
                     
                     // Get the newly added message
                     const newMessage = messagesDiv.lastElementChild;
+                    const responseContainer = newMessage.querySelector('.ai-response');
                     
-                    // Apply animation after a short delay
-                    setTimeout(() => {
-                        newMessage.classList.add('show');
+                    // Show the message
+                    newMessage.classList.add('show');
+                    
+                    // Start typewriter effect
+                    const renderedContent = renderMarkdown(formattedMessage);
+                    const plainTextContent = stripHtml(renderedContent);
+                    
+                    // Store the full rendered content for skip button
+                    responseContainer.dataset.fullContent = renderedContent;
+                    
+                    // Initialize the typewriter effect
+                    initiateTypewriter(responseContainer, plainTextContent, renderedContent);
+                    
+                    // Scroll to the bottom
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    
+                    // Set up skip button handler
+                    const skipButton = newMessage.querySelector('.skip-typewriter');
+                    skipButton.addEventListener('click', function() {
+                        // Stop typewriter animation
+                        if (responseContainer.typewriterInterval) {
+                            clearInterval(responseContainer.typewriterInterval);
+                        }
+                        
+                        // Show full content
+                        responseContainer.innerHTML = responseContainer.dataset.fullContent;
                         
                         // Apply syntax highlighting
                         Prism.highlightAll();
                         
-                        // Format tables
+                        // Process tables
                         processTables();
                         
-                        // Scroll to the bottom
-                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    }, 10);
+                        // Hide skip button
+                        this.style.display = 'none';
+                    });
                 } else {
-                    // Show error message with animation
+                    // Show error message
                     const errorHtml = `
                     <div class="message ai-message">
                         <div class="message-header">Error:</div>
@@ -195,14 +240,30 @@
                     
                     const messagesDiv = document.getElementById('messages');
                     messagesDiv.insertAdjacentHTML('beforeend', errorHtml);
-                    
-                    setTimeout(() => {
-                        messagesDiv.lastElementChild.classList.add('show');
-                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    }, 10);
+                    messagesDiv.lastElementChild.classList.add('show');
                 }
+                
+                // Scroll to bottom again
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
             } catch (error) {
-                console.error("Failed to parse response:", error);
+                console.error("Failed to parse response:", error, evt.detail.xhr.responseText);
+                
+                // Show a fallback error message
+                const errorHtml = `
+                <div class="message ai-message">
+                    <div class="message-header">Error:</div>
+                    <div class="message-content text-danger">Failed to process response: ${error.message}</div>
+                </div>
+                `;
+                
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.insertAdjacentHTML('beforeend', errorHtml);
+                messagesDiv.lastElementChild.classList.add('show');
+                
+                // Scroll to bottom
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
             }
         } else if (evt.detail.target.id === "connection-form") {
             const response = JSON.parse(evt.detail.xhr.responseText);
@@ -214,6 +275,100 @@
             document.getElementById('connection-status').innerHTML = statusHtml;
         }
     });
+
+    // Improved streaming text function that handles errors better
+    function simpleStreamText(element, text, speed = 10) {
+        let index = 0;
+        element.innerHTML = "";
+        
+        const streamingSpan = document.createElement('span');
+        element.appendChild(streamingSpan);
+        
+        const cursor = document.createElement('span');
+        cursor.className = 'streaming-cursor';
+        element.appendChild(cursor);
+        
+        const timer = setInterval(() => {
+            if (index < text.length) {
+                streamingSpan.textContent += text.charAt(index);
+                index++;
+                
+                // Scroll as we add text
+                const messagesContainer = document.querySelector('.messages-container');
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            } else {
+                clearInterval(timer);
+                cursor.remove();
+            }
+        }, speed);
+    }
+    
+    // Function to strip HTML for typewriter effect
+    function stripHtml(html) {
+        const tmp = document.createElement('DIV');
+        tmp.innerHTML = html;
+        return tmp.textContent || tmp.innerText || '';
+    }
+    
+    // Enhanced typewriter effect
+    function initiateTypewriter(element, plainText, fullHtml) {
+        let i = 0;
+        let speed = 10; // Speed of typewriter effect (milliseconds)
+        
+        // Clear the element first
+        element.innerHTML = '';
+        
+        // Create our typewriter container
+        const typewriterContainer = document.createElement('div');
+        typewriterContainer.className = 'typewriter-container';
+        element.appendChild(typewriterContainer);
+        
+        // Create cursor element
+        const cursor = document.createElement('span');
+        cursor.className = 'typewriter-cursor';
+        cursor.innerHTML = '|';
+        element.appendChild(cursor);
+        
+        // Store the interval ID to allow stopping
+        const interval = setInterval(function() {
+            if (i < plainText.length) {
+                // Add character by character
+                typewriterContainer.textContent += plainText.charAt(i);
+                i++;
+                
+                // Auto-scroll as text is added
+                const messagesContainer = document.querySelector('.messages-container');
+                if (messagesContainer) {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+                
+                // Speed variation for more natural typing
+                speed = Math.random() * 10 + 5;
+            } else {
+                // When finished, replace with full HTML content
+                clearInterval(interval);
+                element.innerHTML = fullHtml;
+                
+                // Apply syntax highlighting
+                Prism.highlightAll();
+                
+                // Process tables
+                processTables();
+                
+                // Hide the skip button
+                const parentMessage = element.closest('.message');
+                const skipButton = parentMessage.querySelector('.skip-typewriter');
+                if (skipButton) {
+                    skipButton.style.display = 'none';
+                }
+            }
+        }, speed);
+        
+        // Store the interval ID on the element for the skip button
+        element.typewriterInterval = interval;
+    }
     
     // Initialize any existing markdown content
     document.addEventListener('DOMContentLoaded', function() {
@@ -227,17 +382,15 @@
         
         // Process tables
         processTables();
+        
+        // Add console log to verify script is loaded
+        console.log("Chat interface initialized");
     });
     
-    // Set up HTMX enhancement for chat form
+    // Set up HTMX enhancement for chat form - simplified to avoid potential recursion issues
     document.getElementById('chat-form').addEventListener('submit', function(e) {
-        e.preventDefault(); // Prevent default form submission
-        
-        const message = document.getElementById('message-input').value;
-        if (!message.trim()) return;
-        
-        // Use HTMX to trigger the request
-        htmx.trigger('#chat-form', 'submit');
+        // Only prevent default - let HTMX handle the request
+        e.preventDefault();
     });
 </script>
 {% endblock %}

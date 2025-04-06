@@ -342,6 +342,160 @@
             from, to { border-color: transparent }
             50% { border-color: #666 }
         }
+        
+        /* Skeleton loading animation */
+        .skeleton-container {
+            max-width: 85%;
+            margin-right: auto;
+            opacity: 1;
+        }
+        
+        .skeleton {
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            height: 16px;
+            margin: 3px 0;
+        }
+        
+        .skeleton::after {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            transform: translateX(-100%);
+            background-image: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0,
+                rgba(255, 255, 255, 0.2) 20%,
+                rgba(255, 255, 255, 0.5) 60%,
+                rgba(255, 255, 255, 0)
+            );
+            animation: shimmer 2s infinite;
+            content: '';
+        }
+        
+        @keyframes shimmer {
+            100% {
+                transform: translateX(100%);
+            }
+        }
+        
+        .skeleton-line-long {
+            width: 90%;
+        }
+        
+        .skeleton-line-medium {
+            width: 65%;
+        }
+        
+        .skeleton-line-short {
+            width: 40%;
+        }
+        
+        /* Text streaming animation */
+        .text-streaming {
+            display: inline;
+        }
+        
+        .streaming-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 16px;
+            background-color: #333;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        /* Query display styling */
+        .query-display {
+            background-color: #f8f9fa;
+            border-left: 3px solid #6c757d;
+            margin: 8px 0;
+            padding: 8px 12px;
+            font-style: italic;
+            color: #495057;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        /* Enhanced message transitions */
+        .message {
+            transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        
+        .message-content {
+            position: relative;
+        }
+        
+        /* Context toggle button */
+        .context-toggle {
+            font-size: 0.8rem;
+            color: #6c757d;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 4px;
+            display: inline-block;
+        }
+        
+        /* Enhanced tables with alternating row colors */
+        table tbody tr:nth-of-type(odd) {
+            background-color: rgba(0,0,0,0.02);
+        }
+        
+        /* Enhanced typewriter styling */
+        .typewriter-container {
+            display: inline;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+        
+        .typewriter-cursor {
+            display: inline-block;
+            width: 2px;
+            height: 18px;
+            background-color: #333;
+            margin-left: 2px;
+            animation: blink 0.7s infinite;
+            vertical-align: middle;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        
+        .typewriter-controls {
+            margin-top: 8px;
+            text-align: right;
+            opacity: 0.7;
+            transition: opacity 0.3s;
+        }
+        
+        .typewriter-controls:hover {
+            opacity: 1;
+        }
+        
+        .skip-typewriter {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+        }
+        
+        /* Improved AI message styling for better readability during typing */
+        .ai-response {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -479,6 +633,100 @@
                 // If not valid JSON, return the original string
                 return jsonString;
             }
+        }
+        
+        // Text streaming effect
+        function streamText(element, text, speed = 20, callback) {
+            let index = 0;
+            let displayedText = '';
+            
+            // Create streaming container and cursor
+            const streamingSpan = document.createElement('span');
+            streamingSpan.className = 'text-streaming';
+            const cursor = document.createElement('span');
+            cursor.className = 'streaming-cursor';
+            
+            element.innerHTML = '';
+            element.appendChild(streamingSpan);
+            element.appendChild(cursor);
+            
+            const timer = setInterval(() => {
+                if (index < text.length) {
+                    displayedText += text.charAt(index);
+                    streamingSpan.innerHTML = displayedText;
+                    index++;
+                    
+                    // Auto-scroll as text is added
+                    const messagesContainer = document.querySelector('.messages-container');
+                    if (messagesContainer) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                    }
+                } else {
+                    clearInterval(timer);
+                    // Remove cursor when done
+                    cursor.remove();
+                    
+                    // Execute callback when complete
+                    if (callback && typeof callback === 'function') {
+                        callback();
+                    }
+                }
+            }, speed);
+            
+            // Save timer ID to allow canceling
+            element.dataset.streamingTimer = timer;
+            
+            return timer;
+        }
+        
+        // Create skeleton loading placeholder
+        function createSkeletonLoader() {
+            return `
+            <div class="message ai-message skeleton-container show">
+                <div class="message-header">AI:</div>
+                <div class="message-content">
+                    <div class="skeleton skeleton-line-long"></div>
+                    <div class="skeleton skeleton-line-medium"></div>
+                    <div class="skeleton skeleton-line-short"></div>
+                    <div class="skeleton skeleton-line-medium"></div>
+                    <div class="skeleton skeleton-line-long"></div>
+                </div>
+            </div>`;
+        }
+        
+        // Optional: Stop text streaming (for use if needed to cancel)
+        function stopTextStreaming(element) {
+            if (element.dataset.streamingTimer) {
+                clearInterval(parseInt(element.dataset.streamingTimer));
+                delete element.dataset.streamingTimer;
+                
+                // Remove cursor
+                const cursor = element.querySelector('.streaming-cursor');
+                if (cursor) cursor.remove();
+            }
+        }
+        
+        // Convert raw HTML to streaming-safe HTML
+        function prepareHtmlForStreaming(html) {
+            // Parse the HTML and extract content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Process special elements that need special handling
+            const codeBlocks = tempDiv.querySelectorAll('pre code');
+            codeBlocks.forEach(block => {
+                block.parentElement.dataset.codeContent = block.textContent;
+                block.parentElement.dataset.language = block.className;
+            });
+            
+            return {
+                html: tempDiv.innerHTML,
+                specialElements: Array.from(codeBlocks).map(block => ({
+                    type: 'code',
+                    content: block.textContent,
+                    language: block.className
+                }))
+            };
         }
     </script>
 </body>
