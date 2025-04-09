@@ -9,6 +9,12 @@ A web application that allows users to interact with MySQL databases through a c
 - View query results in a formatted table
 - Support for database selection
 
+## Initial Concept
+
+Below is an initial design sketch of the project:
+
+![Initial Design Sketch](project_excalidraw.png)
+
 ## Setup and Installation
 
 ### Prerequisites
