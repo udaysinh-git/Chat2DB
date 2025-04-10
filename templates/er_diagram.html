@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>ER Diagram: {{ db_name }}</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <h1>ER Diagram for Database: {{ db_name }}</h1>
+        <div class="mermaid">
+            {{ mermaid_diagram | safe }}
+        </div>
+        <div class="form-inline" style="margin-top:20px;">
+            <a href="{{ url_for('schema.schema', db_name=db_name) }}" hx-get="{{ url_for('schema.schema', db_name=db_name) }}" hx-target="#container">
+                <button class="button-74" role="button">Back to Schema</button>
+            </a>
+        </div>
+    </div>
+    <script>
+        // Log the ER diagram output to the browser console
+        console.log("Mermaid diagram (ER):", "{{ mermaid_diagram | safe }}");
+    </script>
+</body>
+</html>
