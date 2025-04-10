@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Create Database</title>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <!-- Added a card container for better layout -->
+        <div class="card">
+            <h1>Create Database</h1>
+            <form method="POST" hx-post="{{ url_for('create_database.create_database') }}" hx-target="#container">
+                <!-- Add inline margin-bottom for extra spacing -->
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label for="db_name">Database Name:</label>
+                    <input class="input-74" type="text" id="db_name" name="db_name" required>
+                </div>
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label for="example_schema">Example Schema (optional):</label>
+                    <textarea class="input-74" id="example_schema" name="example_schema"></textarea>
+                </div>
+                <!-- New button group with Back on left and Continue on right -->
+                <div class="button-group" style="display:flex; justify-content: space-between; width:100%; margin-top:20px;">
+                    <a href="{{ url_for('dashboard.dashboard') }}" hx-get="{{ url_for('dashboard.dashboard') }}" hx-target="#container">
+                        <button class="button-74" role="button" type="button">Back</button>
+                    </a>
+                    <button class="button-74" role="button" type="submit">Continue</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

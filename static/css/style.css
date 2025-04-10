@@ -1,0 +1,213 @@
+/* Import cool free monofont Fira Mono */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&display=swap');
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    font-family: 'Fira Mono', monospace;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+    animation: fadeIn 1.5s ease-in-out;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+}
+
+form {
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+    text-align: center;
+}
+
+.center-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+/* Button design (ensure same height as input) */
+.button-74 {
+  background-color: #fff; /* white background */
+  border: 2px solid #000; /* black border */
+  border-radius: 30px;
+  box-shadow: #000 4px 4px 0 0; /* black shadow */
+  color: #000; /* black text */
+  cursor: pointer;
+  display: inline-block;
+  font-family: 'Fira Mono', monospace;
+  font-weight: 500;
+  font-size: 18px;
+  padding: 0 18px;
+  height: 50px;        /* explicitly set height */
+  line-height: 50px;   /* vertical alignment */
+  text-align: center;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: all 0.2s ease-in-out;
+}
+
+.button-74:hover {
+  background-color: #fff;
+}
+
+.button-74:active {
+  box-shadow: #000 2px 2px 0 0;
+  transform: translate(2px, 2px);
+}
+
+@media (min-width: 768px) {
+  .button-74 {
+    min-width: 120px;
+    padding: 0 25px;
+  }
+}
+
+/* Updated Input design for uniform height and smooth animation */
+.input-74 {
+  background-color: #fff; /* white background */
+  border: 2px solid #000; /* black border */
+  border-radius: 30px;
+  box-shadow: #000 4px 4px 0 0; /* black shadow */
+  color: #000;
+  font-family: 'Fira Mono', monospace;
+  padding: 0 15px;  /* removed vertical padding */
+  font-size: 18px;
+  height: 50px;      /* same vertical length as button */
+  box-sizing: border-box;
+  transition: all 0.3s ease-in-out; /* smoother animation */
+}
+
+.input-74:focus {
+  outline: none;
+  box-shadow: inset #000 2px 2px 0 0;
+}
+
+/* Cursor blinking animation on input while typing */
+.input-74.typing {
+  animation: blinkCursor 1s infinite;
+}
+
+@keyframes blinkCursor {
+  0% { box-shadow: 0 0 0 2px #000; }
+  50% { box-shadow: 0 0 0 2px transparent; }
+  100% { box-shadow: 0 0 0 2px #000; }
+}
+
+/* Style for horizontal form layout */
+.form-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 0;
+}
+
+.form-inline label {
+  margin-right: 10px;
+}
+
+/* Make inputs take appropriate width */
+.form-inline .input-74 {
+  flex: 1 0 200px;
+  max-width: 300px;
+}
+
+/* Adjust button position */
+.form-inline .button-74 {
+  flex-shrink: 0;
+}
+
+/* Stack label and input vertically */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin: 0;
+  gap: 8px;  /* spacing between label and input */
+}
+
+.form-group label {
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Typography enhancements */
+h1 {
+  font-family: 'Fira Mono', monospace;
+  font-size: 2.8rem;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
+
+h3 {
+  font-family: 'Fira Mono', monospace;
+  font-size: 1.8rem;
+  letter-spacing: 0.6px;
+  font-weight: 500;
+}
+
+/* Apply text animation to headers, paragraphs, and labels */
+h1, h2, h3, p, label {
+  animation: fadeInText 1.5s ease-in-out;
+}
+
+p {
+  font-family: 'Fira Mono', monospace;
+  font-size: 1.2rem;
+  letter-spacing: 0.4px;
+}
+
+label {
+  font-family: 'Fira Mono', monospace;
+  color: #000;
+  animation: fadeInText 1.5s ease-in-out;
+  font-size: 1.2rem;
+  letter-spacing: 0.4px;
+}
+
+/* Add animated underline for database links */
+.underline-anim {
+  position: relative;
+  text-decoration: none;
+}
+
+.underline-anim::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  width: 0%;
+  height: 2px;
+  background-color: currentColor;
+  transition: width 0.3s ease-in-out;
+}
+
+.underline-anim:hover::after {
+  width: 100%;
+}
+
+/* Define keyframes for overall body fade-in */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Define keyframes for text fade-in animation */
+@keyframes fadeInText {
+  from {
+      transform: translateY(-10px);
+      opacity: 0;
+  }
+  to {
+      transform: translateY(0);
+      opacity: 1;
+  }
+}

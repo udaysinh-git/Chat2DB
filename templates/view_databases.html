@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>View Databases</title>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <h1>Databases</h1>
+        <ul>
+            {% for db in databases %}
+                <li>
+                    <a href="{{ url_for('schema.schema', db_name=db[0]) }}" hx-get="{{ url_for('schema.schema', db_name=db[0]) }}" hx-target="#container" class="underline-anim">{{ db[0] }}</a>
+                </li>
+            {% else %}
+                <li>No databases available</li>
+            {% endfor %}
+        </ul>
+        <div class="form-inline">
+            <a href="{{ url_for('current_chat.current_chat') }}" hx-get="{{ url_for('current_chat.current_chat') }}" hx-target="#container">
+                <button class="button-74" role="button">Current Chat</button>
+            </a>
+            <a href="{{ url_for('dashboard.dashboard') }}" hx-get="{{ url_for('dashboard.dashboard') }}" hx-target="#container">
+                <button class="button-74" role="button">Back to Dashboard</button>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Dashboard</title>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <h1>Dashboard</h1>
+        <div class="form-inline">
+            <a href="{{ url_for('create_database.create_database') }}" hx-get="{{ url_for('create_database.create_database') }}" hx-target="#container">
+                <button class="button-74" role="button">Create Database</button>
+            </a>
+            <a href="{{ url_for('view_databases.view_databases') }}" hx-get="{{ url_for('view_databases.view_databases') }}" hx-target="#container">
+                <button class="button-74" role="button">View Databases</button>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

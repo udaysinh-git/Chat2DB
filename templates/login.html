@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Login</title>
+</head>
+<body>
+    <div class="center-container">
+        <form method="POST">
+            <!-- Place label on its own line -->
+            <label for="root_password">MySQL Root Password:</label>
+            <!-- Flex container for input and button -->
+            <div class="form-inline">
+                <input class="input-74" type="password" id="root_password" name="root_password" required>
+                <button class="button-74" role="button" type="submit">Login</button>
+            </div>
+        </form>
+    </div>
+    <script>
+        const input = document.getElementById('root_password');
+        input.addEventListener('input', function() {
+            this.classList.add('typing');
+            clearTimeout(this.typingTimer);
+            this.typingTimer = setTimeout(() => {
+                this.classList.remove('typing');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

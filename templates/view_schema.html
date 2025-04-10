@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Schema: {{ db_name }}</title>
+    <!-- Include MermaidJS -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        // Use startOnLoad: true so Mermaid autodetects without re-init.
+        mermaid.initialize({ startOnLoad: true });
+        function toggleER() {
+            const erDiv = document.getElementById("mermaidER");
+            erDiv.style.display = (erDiv.style.display === "none") ? "block" : "none";
+        }
+    </script>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <h1>Schema for Database: {{ db_name }}</h1>
+        <!-- Display tables and columns -->
+        {% for table, columns in schema_details.items() %}
+            <h3>{{ table }}</h3>
+            <ul>
+                {% for col in columns %}
+                    <li>{{ col[0] }} - {{ col[1] }}</li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+        <button class="button-74" onclick="toggleER()">Toggle ER Diagram</button>
+        <div id="mermaidER" style="display:none; margin-top:20px;">
+            <div class="mermaid">
+erDiagram
+
+{%- for table, columns in schema_details.items() %}
+{{ table|sanitize_mermaid }} {
+{%- for col in columns %}
+{{ col[0]|sanitize_mermaid }} "{{ col[1]|sanitize_mermaid }}"
+{%- endfor %}
+}
+{%- endfor %}
+
+            </div>
+        </div>
+        <div class="form-inline" style="margin-top:20px;">
+            <a href="{{ url_for('view_databases.view_databases') }}" hx-get="{{ url_for('view_databases.view_databases') }}" hx-target="#container">
+                <button class="button-74" role="button">Back</button>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
