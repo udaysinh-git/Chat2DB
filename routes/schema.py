@@ -201,6 +201,7 @@ def er_diagram(db_name):
     # Remove leading and trailing triple backticks if present
     if mermaid_diagram.startswith("```") and mermaid_diagram.endswith("```"):
         mermaid_diagram = mermaid_diagram[3:-3].strip()
+    mermaid_diagram = mermaid_diagram.replace("mermaid", "")
     # Fix for Mermaid syntax error in ER diagram: remove square brackets around PK/FK
     mermaid_diagram = mermaid_diagram.replace('[PK]', 'PK').replace('[FK]', 'FK')
     # New: Remove size definitions for varchar and convert decimal commas to underscores
@@ -210,5 +211,5 @@ def er_diagram(db_name):
     if not mermaid_diagram.startswith("erDiagram"):
         mermaid_diagram = "erDiagram\n" + mermaid_diagram
     # Standardize all relationship labels to "FK relationship"
-    mermaid_diagram = re.sub(r'(:\s*").+?(")', r': "FK relationship"', mermaid_diagram)
+    # mermaid_diagram = re.sub(r'(:\s*").+?(")', r': "FK relationship"', mermaid_diagram)
     return render_template('er_diagram.html', db_name=db_name, mermaid_diagram=mermaid_diagram)
