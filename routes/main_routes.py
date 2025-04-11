@@ -33,6 +33,25 @@ def connect():
     except Exception as e:
         return jsonify({"success": False, "message": f"Connection error: {str(e)}"})
 
+@main_bp.route('/databases', methods=['POST'])
+def databases():
+    data = request.form
+    user = data.get('user')
+    password = data.get('password')
+    host = data.get('host')
+    port = data.get('port')
+    try:
+        import pymysql
+        conn = pymysql.connect(host=host, port=int(port), user=user, password=password)
+        cursor = conn.cursor()
+        cursor.execute("SHOW DATABASES;")
+        dbs = [row[0] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return jsonify({"success": True, "databases": dbs})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 @main_bp.route('/chat', methods=['POST'])
 def chat():
     user_query = request.form.get('message')

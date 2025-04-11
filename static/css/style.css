@@ -211,3 +211,22 @@ label {
       opacity: 1;
   }
 }
+
+/* Styles for connection alert messages */
+.connection-alert {
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 16px;
+    margin-top: 10px;
+    display: inline-block;
+}
+.connection-alert.success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+.connection-alert.error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}

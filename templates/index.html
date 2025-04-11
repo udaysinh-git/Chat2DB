@@ -7,28 +7,32 @@
         <!-- Sidebar -->
         <div class="col-md-3 col-lg-2 sidebar">
             <h5>Database Connection</h5>
-            <form id="connection-form" class="connection-form" hx-post="/connect" hx-target="#connection-status">
+            <form id="connection-form" class="connection-form">
                 <div class="mb-2">
                     <label for="host" class="form-label">Host</label>
-                    <input type="text" class="form-control form-control-sm" id="host" name="host" value="localhost">
+                    <input type="text" class="input-74" id="host" name="host" value="localhost">
                 </div>
                 <div class="mb-2">
                     <label for="port" class="form-label">Port</label>
-                    <input type="text" class="form-control form-control-sm" id="port" name="port" value="3306">
+                    <input type="text" class="input-74" id="port" name="port" value="3306">
                 </div>
                 <div class="mb-2">
                     <label for="user" class="form-label">User</label>
-                    <input type="text" class="form-control form-control-sm" id="user" name="user" value="root">
+                    <input type="text" class="input-74" id="user" name="user" value="root">
                 </div>
                 <div class="mb-2">
                     <label for="password" class="form-label">Password</label>
-                    <input type="password" class="form-control form-control-sm" id="password" name="password" value="admin">
+                    <input type="password" class="input-74" id="password" name="password" value="{{ session.get('root_password', 'admin') }}">
                 </div>
                 <div class="mb-2">
                     <label for="database" class="form-label">Database</label>
-                    <input type="text" class="form-control form-control-sm" id="database" name="database" value="Chinook">
+                    <!-- Changed from text input to dropdown -->
+                    <select class="input-74" id="database" name="database">
+                        <option value="">Select Database</option>
+                    </select>
+                    <button type="button" class="button-74" id="load-databases">Load Databases</button>
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm w-100">Connect</button>
+                <button type="submit" class="button-74 w-100">Connect</button>
             </form>
             <div id="connection-status" class="mt-3"></div>
         </div>
@@ -45,7 +49,7 @@
                         </div>
                         {% else %}
                         <div class="message ai-message show">
-                            <div class="message-header">AI:</div>
+                            <div class="message-header">QueryBridge:</div>
                             <div class="message-content rendered-markdown">{{ message.content | safe }}</div>
                         </div>
                         {% endif %}
@@ -176,7 +180,7 @@
                     // Create the AI message container first 
                     const aiMessageHtml = `
                     <div class="message ai-message">
-                        <div class="message-header">AI:</div>
+                        <div class="message-header">QueryBridge:</div>
                         <div class="message-content">
                             <div class="query-display">Query: "${originalQuery}"</div>
                             <div class="ai-response"></div>
@@ -266,15 +270,27 @@
                 // Scroll to bottom
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
             }
-        } else if (evt.detail.target.id === "connection-form") {
-            const response = JSON.parse(evt.detail.xhr.responseText);
-            
-            // Show connection status with animation
-            const statusClass = response.success ? 'alert-success animate__animated animate__fadeIn' : 'alert-danger animate__animated animate__shakeX';
-            const statusHtml = `<div class="alert ${statusClass}">${response.message}</div>`;
-                
-            document.getElementById('connection-status').innerHTML = statusHtml;
         }
+    });
+
+    // Remove any HTMX connection-handling and use normal JavaScript for /connect:
+    const connectionForm = document.getElementById('connection-form');
+    connectionForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(connectionForm);
+        fetch('/connect', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            const alertClass = data.success ? "success" : "error";
+            const statusHtml = `<div class="connection-alert ${alertClass}">${data.message}</div>`;
+            document.getElementById('connection-status').innerHTML = statusHtml;
+        })
+        .catch(error => {
+            document.getElementById('connection-status').innerHTML = `<div class="connection-alert error">Connection failed.</div>`;
+        });
     });
 
     // Improved streaming text function that handles errors better
@@ -392,6 +408,42 @@
     document.getElementById('chat-form').addEventListener('submit', function(e) {
         // Only prevent default - let HTMX handle the request
         e.preventDefault();
+    });
+
+    // New: Load Databases handler
+    document.getElementById("load-databases").addEventListener("click", function() {
+        const host = document.getElementById("host").value;
+        const port = document.getElementById("port").value;
+        const user = document.getElementById("user").value;
+        const password = document.getElementById("password").value;
+        const formData = new FormData();
+        formData.append("host", host);
+        formData.append("port", port);
+        formData.append("user", user);
+        formData.append("password", password);
+        fetch('/databases', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                const select = document.getElementById("database");
+                select.innerHTML = "";
+                data.databases.forEach(db => {
+                    const option = document.createElement("option");
+                    option.value = db;
+                    option.text = db;
+                    select.appendChild(option);
+                });
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Error fetching databases:", err);
+            alert("Error fetching databases.");
+        });
     });
 </script>
 {% endblock %}
