@@ -46,10 +46,9 @@
         
         /* Updated container for relationship visualization */
         .schema-tables-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-            gap: 20px;
-            position: relative;
+            /* changed from grid to block for absolute positioning */
+            display: block;
+            position: relative; /* ensure children are positioned relative to container */
             min-height: 600px;
             padding: 20px 0;
         }
@@ -63,9 +62,10 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             margin-bottom: 20px;
             transition: transform 0.2s, box-shadow 0.2s;
-            position: relative;
+            position: relative; /* initial positioning remains relative */
             z-index: 10; /* Above connection lines */
             background-color: white;
+            cursor: grab; /* added hand pointer for dragging */
         }
         
         .schema-table:hover {
@@ -438,7 +438,22 @@
                     setTimeout(() => {
                         table.style.opacity = '1';
                         table.style.transform = 'translateY(0)';
-                        jsPlumbInstance.draggable(table);
+                        jsPlumbInstance.draggable(table, {
+                            start: function(event) {
+                                const container = document.getElementById('schemaTablesContainer');
+                                const containerRect = container.getBoundingClientRect();
+                                const rect = table.getBoundingClientRect();
+                                // Set absolute position to prevent shifting after dragging
+                                table.style.position = 'absolute';
+                                table.style.left = (rect.left - containerRect.left) + 'px';
+                                table.style.top = (rect.top - containerRect.top) + 'px';
+                                table.style.cursor = 'grabbing';
+                            },
+                            stop: function(event) {
+                                table.style.cursor = 'grab';
+                                jsPlumbInstance.repaintEverything();
+                            }
+                        });
                     }, 50 * index);
                 });
                 
