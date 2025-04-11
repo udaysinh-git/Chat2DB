@@ -369,8 +369,10 @@
             <a href="{{ url_for('schema.er_diagram', db_name=db_name) }}">
                 <button class="button-74" role="button">View ER Diagram</button>
             </a>
-            <!-- New toggle button -->
+            <!-- New toggle and zoom buttons -->
             <button class="button-74" role="button" onclick="toggleConnections()">Toggle Connections</button>
+            <button class="button-74" role="button" onclick="zoomIn()">Zoom In</button>
+            <button class="button-74" role="button" onclick="zoomOut()">Zoom Out</button>
             <a href="{{ url_for('view_databases.view_databases') }}" hx-get="{{ url_for('view_databases.view_databases') }}" hx-target="#container">
                 <button class="button-74" role="button">Back to Databases</button>
             </a>
@@ -385,6 +387,8 @@
         let jsPlumbInstance;
         let showingRelations = false; // start with connections hidden
         let relationConnections = [];
+        let scale = 1; // initial zoom scale
+        let containerOffset = { x: 0, y: 0 };
         
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof jsPlumb === 'undefined') {
@@ -428,12 +432,13 @@
                 }
             });
             
-            // Animate tables in
+            // Animate tables in and make them draggable
             setTimeout(() => {
                 tables.forEach((table, index) => {
                     setTimeout(() => {
                         table.style.opacity = '1';
                         table.style.transform = 'translateY(0)';
+                        jsPlumbInstance.draggable(table);
                     }, 50 * index);
                 });
                 
@@ -442,6 +447,32 @@
                 // Do not draw connections initially
                 // drawRelationConnections();  <-- removed initial call
             }, 100);
+            
+            // Enable panning of the container by dragging on its background
+            const container = document.getElementById('schemaTablesContainer');
+            let isPanning = false, panStart = { x: 0, y: 0 };
+            container.addEventListener('mousedown', function(e) {
+                if (e.target === container) {
+                    isPanning = true;
+                    panStart = { x: e.clientX, y: e.clientY };
+                    container.style.cursor = 'move';
+                }
+            });
+            document.addEventListener('mousemove', function(e) {
+                if (isPanning) {
+                    let dx = e.clientX - panStart.x;
+                    let dy = e.clientY - panStart.y;
+                    containerOffset.x += dx;
+                    containerOffset.y += dy;
+                    container.style.transform = `translate(${containerOffset.x}px, ${containerOffset.y}px) scale(${scale})`;
+                    panStart = { x: e.clientX, y: e.clientY };
+                    jsPlumbInstance.repaintEverything();
+                }
+            });
+            document.addEventListener('mouseup', function() {
+                isPanning = false;
+                container.style.cursor = 'default';
+            });
         });
         
         // Store relationship data - No changes needed
@@ -626,6 +657,21 @@
                     tableElem.classList.remove("highlighted");
                 }, 3000);
             }
+        }
+
+        // Zoom functions
+        function zoomIn() {
+            scale += 0.1;
+            updateContainerTransform();
+        }
+        function zoomOut() {
+            scale = Math.max(0.1, scale - 0.1);
+            updateContainerTransform();
+        }
+        function updateContainerTransform() {
+            const container = document.getElementById('schemaTablesContainer');
+            container.style.transform = `translate(${containerOffset.x}px, ${containerOffset.y}px) scale(${scale})`;
+            jsPlumbInstance.repaintEverything();
         }
 
         function toggleConnections() {
