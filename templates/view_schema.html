@@ -8,7 +8,7 @@
     <!-- Include Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Include jsPlumb for relationship visualization -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsplumb/2.15.6/js/jsplumb.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsPlumb/2.14.3/js/jsplumb.js"></script>
     <script>
         mermaid.initialize({ startOnLoad: true });
     </script>
@@ -163,12 +163,12 @@
         
         /* Relation lines styling */
         .jtk-connector {
-            z-index: 5;
+            z-index: 3000; /* increased z-index so connections appear above tables */
             opacity: 0.8;
         }
         
         .jtk-endpoint {
-            z-index: 6;
+            z-index: 3001; /* increased z-index for endpoints */
         }
         
         .endpoint-source {
@@ -369,6 +369,8 @@
             <a href="{{ url_for('schema.er_diagram', db_name=db_name) }}">
                 <button class="button-74" role="button">View ER Diagram</button>
             </a>
+            <!-- New toggle button -->
+            <button class="button-74" role="button" onclick="toggleConnections()">Toggle Connections</button>
             <a href="{{ url_for('view_databases.view_databases') }}" hx-get="{{ url_for('view_databases.view_databases') }}" hx-target="#container">
                 <button class="button-74" role="button">Back to Databases</button>
             </a>
@@ -376,15 +378,20 @@
     </div>
     
     <script>
-        // Log the received Mermaid diagram to the browser console
-        console.log("Mermaid diagram (view_schema):", "{{ mermaid_diagram | safe }}");
+        // Updated console.log to output a JSON-escaped mermaid diagram string.
+        console.log("Mermaid diagram (view_schema):", {{ mermaid_diagram | safe | tojson }});
         
         // Initialize jsPlumb for relationship visualization
         let jsPlumbInstance;
-        let showingRelations = false;
+        let showingRelations = false; // start with connections hidden
         let relationConnections = [];
         
         document.addEventListener('DOMContentLoaded', function() {
+            if (typeof jsPlumb === 'undefined') {
+                console.error('jsPlumb is not defined. Please ensure the jsPlumb script is properly loaded.');
+                return;
+            }
+            
             // Initialize jsPlumb with proper settings
             jsPlumbInstance = jsPlumb.getInstance({
                 DragOptions: { cursor: 'pointer', zIndex: 2000 },
@@ -432,6 +439,8 @@
                 
                 // Setup relationship data after tables are rendered
                 setupRelationshipData();
+                // Do not draw connections initially
+                // drawRelationConnections();  <-- removed initial call
             }, 100);
         });
         
@@ -605,6 +614,28 @@
             document.querySelectorAll('.highlighted-key').forEach(el => {
                 el.classList.remove('highlighted-key');
             });
+        }
+
+        // Function to scroll into view and highlight a table when a foreign key reference is clicked.
+        function focusTable(tableName) {
+            var tableElem = document.getElementById("table-" + tableName);
+            if (tableElem) {
+                tableElem.scrollIntoView({ behavior: "smooth", block: "center" });
+                tableElem.classList.add("highlighted");
+                setTimeout(function() {
+                    tableElem.classList.remove("highlighted");
+                }, 3000);
+            }
+        }
+
+        function toggleConnections() {
+            if (showingRelations) {
+                clearRelationConnections();
+                showingRelations = false;
+            } else {
+                drawRelationConnections();
+                showingRelations = true;
+            }
         }
     </script>
 </body>
