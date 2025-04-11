@@ -1,0 +1,36 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Chat History</h2>
+    {% if chat_history %}
+        <div class="list-group">
+            {% for msg in chat_history %}
+            <div class="list-group-item">
+                <strong>{{ msg.role == 'human' and 'You' or 'QueryBridge' }}</strong>
+                <span class="text-muted">({{ msg.timestamp if msg.timestamp is defined else 'N/A' }})</span>
+                {% if msg.role == 'ai' %}
+                    <div class="message-content rendered-markdown">{{ msg.content | safe }}</div>
+                {% else %}
+                    <p class="mb-0">{{ msg.content }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No chat history available.</p>
+    {% endif %}
+    <div class="mt-3">
+        <a href="{{ url_for('main.index') }}" class="btn btn-primary">Back to Chat</a>
+    </div>
+</div>
+
+<script>
+// Render markdown for all elements with class "rendered-markdown"
+document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.rendered-markdown').forEach(function(el) {
+         el.innerHTML = marked.parse(el.innerHTML);
+    });
+});
+</script>
+{% endblock %}
