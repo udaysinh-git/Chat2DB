@@ -5,36 +5,607 @@
     <title>Schema: {{ db_name }}</title>
     <!-- Include MermaidJS -->
     <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <!-- Include Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Include jsPlumb for relationship visualization -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsplumb/2.15.6/js/jsplumb.min.js"></script>
     <script>
         mermaid.initialize({ startOnLoad: true });
     </script>
+    <style>
+        .schema-dashboard {
+            display: flex;
+            justify-content: space-between;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        
+        .schema-stat {
+            text-align: center;
+            padding: 12px;
+            border-radius: 6px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            flex: 1;
+            margin: 0 8px;
+        }
+        
+        .schema-stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4b6584;
+        }
+        
+        .schema-stat-label {
+            font-size: 0.9rem;
+            color: #777;
+        }
+        
+        /* Updated container for relationship visualization */
+        .schema-tables-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            position: relative;
+            min-height: 600px;
+            padding: 20px 0;
+        }
+        
+        /* Smaller, more compact tables */
+        .schema-table {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            z-index: 10; /* Above connection lines */
+            background-color: white;
+        }
+        
+        .schema-table:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            z-index: 20; /* Bring to front when hovering */
+        }
+        
+        .schema-table-header {
+            background-color: #4b6584;
+            color: white;
+            padding: 8px 12px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+        
+        .schema-table-body {
+            max-height: 300px;
+            overflow-y: auto;
+            /* display: block; */
+        }
+        
+        /* More compact table content */
+        .schema-table-content {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        
+        .schema-table-content th {
+            background-color: #f1f2f6;
+            color: #333;
+            font-weight: 600;
+            text-align: left;
+            padding: 6px 8px;
+            font-size: 0.8rem;
+        }
+        
+        .schema-table-content td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .schema-table-content tr:hover {
+            background-color: #f9f9f9;
+        }
+        
+        /* Key styling */
+        .key-badge {
+            display: inline-block;
+            padding: 1px 4px;
+            border-radius: 3px;
+            margin-left: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        .key-badge.pk {
+            background-color: #eb3b5a;
+        }
+        
+        .key-badge.fk {
+            background-color: #20bf6b;
+            cursor: pointer;
+        }
+        
+        .fk-reference {
+            font-size: 0.75rem;
+            color: #20bf6b;
+            margin-top: 2px;
+            cursor: pointer;
+        }
+        
+        .fk-reference:hover {
+            text-decoration: underline;
+        }
+        
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        
+        .action-buttons button {
+            margin-right: 10px;
+        }
+        
+        .schema-section {
+            margin-bottom: 30px;
+        }
+        
+        /* Relation lines styling */
+        .jtk-connector {
+            z-index: 5;
+            opacity: 0.8;
+        }
+        
+        .jtk-endpoint {
+            z-index: 6;
+        }
+        
+        .endpoint-source {
+            fill: #eb3b5a;
+        }
+        
+        .endpoint-target {
+            fill: #20bf6b;
+        }
+        
+        /* Highlight connected tables */
+        .highlighted {
+            box-shadow: 0 0 0 3px #4b6584;
+        }
+        
+        .highlighted-key {
+            background-color: #ffeb3b !important;
+            color: #333 !important;
+        }
+        
+        /* Connection visualization legend */
+        .relationship-legend {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+            display: flex;
+            gap: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 8px;
+            border-radius: 2px;
+        }
+        
+        .legend-pk {
+            background-color: #eb3b5a;
+        }
+        
+        .legend-fk {
+            background-color: #20bf6b;
+        }
+        
+        /* Column relationship highlighting */
+        .column-row {
+            position: relative;
+        }
+        
+        .column-connector-endpoint {
+            width: 8px;
+            height: 8px;
+            position: absolute;
+            right: -4px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 50%;
+        }
+        
+        /* Connection styling improvements */
+        .connection-label {
+            background-color: white;
+            padding: 2px 5px;
+            border-radius: 3px;
+            border: 1px solid #4b6584;
+            font-size: 0.7rem;
+            color: #4b6584;
+        }
+        
+        /* Improve relation highlighting */
+        .relation-highlight {
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 0 5px rgba(75, 101, 132, 0.5);
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(75, 101, 132, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(75, 101, 132, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(75, 101, 132, 0); }
+        }
+        
+        /* Enhanced visibility for connections */
+        .active-connection {
+            stroke-width: 3px !important;
+            stroke: #eb3b5a !important;
+            animation: dash 1s linear infinite;
+            stroke-dasharray: 8, 4;
+        }
+        
+        @keyframes dash {
+            to { stroke-dashoffset: -12; }
+        }
+    </style>
 </head>
 <body>
     <div class="center-container" id="container">
         <h1>Schema for Database: {{ db_name }}</h1>
-        <!-- Display tables and columns -->
-        {% for table, columns in schema_details.items() %}
-            <h3>{{ table }}</h3>
-            <ul>
-                {% for col in columns %}
-                    <li>{{ col[0] }} - {{ col[1] }}</li>
+        
+        <!-- Database Stats Dashboard -->
+        <div class="schema-dashboard">
+            <div class="schema-stat">
+                <div class="schema-stat-value">{{ schema_metadata.table_count }}</div>
+                <div class="schema-stat-label"><i class="fas fa-table"></i> Tables</div>
+            </div>
+            <div class="schema-stat">
+                <div class="schema-stat-value">{{ schema_metadata.column_count }}</div>
+                <div class="schema-stat-label"><i class="fas fa-columns"></i> Total Columns</div>
+            </div>
+            <div class="schema-stat">
+                <div class="schema-stat-value">{{ schema_metadata.primary_keys|default({})|length }}</div>
+                <div class="schema-stat-label"><i class="fas fa-key"></i> Primary Keys</div>
+            </div>
+            <div class="schema-stat">
+                <div class="schema-stat-value">{{ schema_metadata.foreign_keys|default({})|length }}</div>
+                <div class="schema-stat-label"><i class="fas fa-link"></i> Foreign Keys</div>
+            </div>
+        </div>
+        
+        <div class="schema-section">
+            <!-- Relationship legend -->
+            <div class="relationship-legend">
+                <div class="legend-item">
+                    <div class="legend-color legend-pk"></div>
+                    <span>Primary Key</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color legend-fk"></div>
+                    <span>Foreign Key</span>
+                </div>
+                <div class="legend-item">
+                    <i class="fas fa-arrow-right" style="color: #4b6584;"></i>
+                    <span>Relationship</span>
+                </div>
+            </div>
+            
+            <!-- Tables layout with relationship visualization -->
+            <div class="schema-tables-container" id="schemaTablesContainer">
+                {% for table, columns in schema_details.items() %}
+                <div class="schema-table" id="table-{{ table }}" data-table-name="{{ table }}">
+                    <div class="schema-table-header">
+                        <span><i class="fas fa-table"></i> {{ table }}</span>
+                    </div>
+                    <div class="schema-table-body">
+                        <table class="schema-table-content">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Type</th>
+                                    <th>Null</th>
+                                    <th>Key</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for col in columns %}
+                                <tr class="column-row" id="{{ table }}-{{ col[0] }}">
+                                    <td>
+                                        <span class="column-name">{{ col[0] }}</span>
+                                        {% if col[3] == "PRI" %}
+                                        <span class="key-badge pk" id="pk-{{ table }}-{{ col[0] }}">PK</span>
+                                        {% elif col[3] == "MUL" %}
+                                        <span class="key-badge fk" id="fk-{{ table }}-{{ col[0] }}" 
+                                              onclick="highlightRelation('{{ table }}', '{{ col[0] }}')">FK</span>
+                                        {% endif %}
+                                        
+                                        {% if table in schema_metadata.foreign_keys %}
+                                            {% for fk in schema_metadata.foreign_keys[table] %}
+                                                {% if fk[0] == col[0] %}
+                                                <div class="fk-reference" 
+                                                     onclick="focusTable('{{ fk[1] }}')">
+                                                    → {{ fk[1] }}.{{ fk[2] }}
+                                                </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ col[1] }}</td>
+                                    <td>{{ col[2] }}</td>
+                                    <td>{{ col[3] }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
                 {% endfor %}
-            </ul>
-        {% endfor %}
-        <div style="margin-top:20px;">
+            </div>
+        </div>
+        
+        <div class="action-buttons">
             <a href="{{ url_for('schema.er_diagram', db_name=db_name) }}">
                 <button class="button-74" role="button">View ER Diagram</button>
             </a>
-        </div>
-        <div class="form-inline" style="margin-top:20px;">
             <a href="{{ url_for('view_databases.view_databases') }}" hx-get="{{ url_for('view_databases.view_databases') }}" hx-target="#container">
-                <button class="button-74" role="button">Back</button>
+                <button class="button-74" role="button">Back to Databases</button>
             </a>
         </div>
     </div>
+    
     <script>
         // Log the received Mermaid diagram to the browser console
         console.log("Mermaid diagram (view_schema):", "{{ mermaid_diagram | safe }}");
+        
+        // Initialize jsPlumb for relationship visualization
+        let jsPlumbInstance;
+        let showingRelations = false;
+        let relationConnections = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize jsPlumb with proper settings
+            jsPlumbInstance = jsPlumb.getInstance({
+                DragOptions: { cursor: 'pointer', zIndex: 2000 },
+                PaintStyle: { 
+                    stroke: '#4b6584', 
+                    strokeWidth: 2,
+                    dashstyle: "2 2"
+                },
+                EndpointStyle: { 
+                    radius: 5, 
+                    fill: '#4b6584' 
+                },
+                Connector: ['Bezier', { curviness: 50 }],
+                Anchors: ['Right', 'Left'],
+                ConnectionOverlays: [
+                    ['Arrow', { 
+                        location: 1, 
+                        width: 10, 
+                        length: 10, 
+                        foldback: 0.8
+                    }]
+                ],
+                Container: "schemaTablesContainer"
+            });
+            
+            // Add opacity transitions to tables
+            const tables = document.querySelectorAll('.schema-table');
+            tables.forEach(table => {
+                table.style.opacity = '0';
+                // Ensure initial display state is set properly
+                const tableBody = table.querySelector('.schema-table-body');
+                if (tableBody) {
+                    tableBody.style.display = 'block';
+                }
+            });
+            
+            // Animate tables in
+            setTimeout(() => {
+                tables.forEach((table, index) => {
+                    setTimeout(() => {
+                        table.style.opacity = '1';
+                        table.style.transform = 'translateY(0)';
+                    }, 50 * index);
+                });
+                
+                // Setup relationship data after tables are rendered
+                setupRelationshipData();
+            }, 100);
+        });
+        
+        // Store relationship data - No changes needed
+        const relationships = [];
+        
+        // Setup relationship data from the template - Fixed
+        function setupRelationshipData() {
+            try {
+                {% if schema_metadata.foreign_keys %}
+                    {% for table, fks in schema_metadata.foreign_keys.items() %}
+                        {% for fk in fks %}
+                            relationships.push({
+                                sourceTable: '{{ table }}',
+                                sourceColumn: '{{ fk[0] }}',
+                                targetTable: '{{ fk[1] }}',
+                                targetColumn: '{{ fk[2] }}'
+                            });
+                        {% endfor %}
+                    {% endfor %}
+                {% endif %}
+                
+                console.log('Relationship data:', relationships);
+            } catch (e) {
+                console.error("Error setting up relationship data:", e);
+            }
+        }
+        
+        // Draw connections between related tables - Fixed
+        function drawRelationConnections() {
+            // Clear any existing connections
+            clearRelationConnections();
+            
+            // Force jsPlumb to do a repaint to ensure proper positioning
+            jsPlumbInstance.repaintEverything();
+            
+            // Check if tables are visible and expanded
+            relationships.forEach(rel => {
+                try {
+                    const sourceTable = document.getElementById(`table-${rel.sourceTable}`);
+                    const targetTable = document.getElementById(`table-${rel.targetTable}`);
+                    
+                    if (!sourceTable || !targetTable) {
+                        console.log(`Tables not found for relationship: ${rel.sourceTable} -> ${rel.targetTable}`);
+                        return;
+                    }
+                    
+                    const sourceRow = document.getElementById(`${rel.sourceTable}-${rel.sourceColumn}`);
+                    const targetRow = document.getElementById(`${rel.targetTable}-${rel.targetColumn}`);
+                    
+                    if (!sourceRow || !targetRow) {
+                        console.log(`Rows not found for columns: ${rel.sourceTable}.${rel.sourceColumn} -> ${rel.targetTable}.${rel.targetColumn}`);
+                        return;
+                    }
+                    
+                    const sourceTableBody = sourceTable.querySelector('.schema-table-body');
+                    const targetTableBody = targetTable.querySelector('.schema-table-body');
+                    
+                    // Only draw connections if both tables are expanded and visible
+                    const sourceVisible = window.getComputedStyle(sourceTableBody).display !== 'none' && 
+                                         window.getComputedStyle(sourceTable).display !== 'none';
+                    const targetVisible = window.getComputedStyle(targetTableBody).display !== 'none' && 
+                                         window.getComputedStyle(targetTable).display !== 'none';
+                    
+                    if (sourceVisible && targetVisible) {
+                        try {
+                            const connection = jsPlumbInstance.connect({
+                                source: sourceRow,
+                                target: targetRow,
+                                anchors: [
+                                    ["Right", "Center"],
+                                    ["Left", "Center"]
+                                ],
+                                endpoint: ["Dot", { radius: 3 }],
+                                connector: ["Bezier", { curviness: 75 }],
+                                paintStyle: { 
+                                    stroke: "#4b6584", 
+                                    strokeWidth: 1.5,
+                                    dashstyle: "4 2"
+                                },
+                                hoverPaintStyle: {
+                                    stroke: "#eb3b5a",
+                                    strokeWidth: 2
+                                },
+                                overlays: [
+                                    ["Arrow", {
+                                        location: 1,
+                                        width: 8,
+                                        length: 8,
+                                        foldback: 0.8
+                                    }],
+                                    ["Label", {
+                                        label: "FK",
+                                        location: 0.5,
+                                        cssClass: "connection-label"
+                                    }]
+                                ]
+                            });
+                            
+                            // Store the connection reference
+                            relationConnections.push(connection);
+                            
+                            // Add click handler to highlight the relationship
+                            connection.bind("click", function() {
+                                highlightConnection(this, rel);
+                            });
+                        } catch (e) {
+                            console.error("Error creating connection:", e);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Error processing relationship:", e);
+                }
+            });
+        }
+        
+        // Clear all relation connections - Fixed
+        function clearRelationConnections() {
+            if (jsPlumbInstance) {
+                jsPlumbInstance.deleteEveryConnection();
+            }
+            relationConnections = [];
+        }
+        
+        // Highlight a connection when clicked
+        function highlightConnection(connection, relationship) {
+            // Remove any existing highlight classes
+            resetHighlights();
+            
+            // Add highlight to the connection
+            connection.setPaintStyle({ 
+                stroke: "#eb3b5a", 
+                strokeWidth: 3,
+                dashstyle: "4 2"
+            });
+            
+            // Highlight the related tables
+            const sourceTable = document.getElementById(`table-${relationship.sourceTable}`);
+            const targetTable = document.getElementById(`table-${relationship.targetTable}`);
+            
+            if (sourceTable && targetTable) {
+                sourceTable.classList.add('highlighted');
+                targetTable.classList.add('highlighted');
+                
+                // Highlight the specific rows
+                const sourceRow = document.getElementById(`${relationship.sourceTable}-${relationship.sourceColumn}`);
+                const targetRow = document.getElementById(`${relationship.targetTable}-${relationship.targetColumn}`);
+                
+                if (sourceRow && targetRow) {
+                    sourceRow.classList.add('highlighted-key');
+                    targetRow.classList.add('highlighted-key');
+                }
+                
+                // Remove highlight after a delay
+                setTimeout(() => {
+                    resetHighlights();
+                    connection.setPaintStyle({ 
+                        stroke: "#4b6584", 
+                        strokeWidth: 1.5,
+                        dashstyle: "4 2" 
+                    });
+                }, 3000);
+            }
+        }
+        
+        // Reset all highlights - No changes needed
+        function resetHighlights() {
+            document.querySelectorAll('.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
+            });
+            document.querySelectorAll('.highlighted-key').forEach(el => {
+                el.classList.remove('highlighted-key');
+            });
+        }
     </script>
 </body>
 </html>

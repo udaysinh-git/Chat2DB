@@ -10,6 +10,11 @@ def schema(db_name):
     if 'root_password' not in session:
         return redirect(url_for('login.login'))
     schema_details = {}
+    table_count = 0
+    column_count = 0
+    primary_keys = {}
+    foreign_keys = {}
+    
     try:
         conn = mysql.connector.connect(
             host="localhost",
@@ -20,14 +25,46 @@ def schema(db_name):
         cursor = conn.cursor()
         cursor.execute("SHOW TABLES;")
         tables = cursor.fetchall()
+        table_count = len(tables)
+        
         for table in tables:
             table_name = table[0]
             cursor.execute(f"DESCRIBE {table_name};")
-            schema_details[table_name] = cursor.fetchall()
+            columns = cursor.fetchall()
+            schema_details[table_name] = columns
+            column_count += len(columns)
+            
+            # Track primary keys
+            for col in columns:
+                if col[3] == "PRI":
+                    if table_name not in primary_keys:
+                        primary_keys[table_name] = []
+                    primary_keys[table_name].append(col[0])
+                    
+            # Get foreign keys
+            try:
+                cursor.execute(f"""
+                    SELECT 
+                        COLUMN_NAME, 
+                        REFERENCED_TABLE_NAME, 
+                        REFERENCED_COLUMN_NAME 
+                    FROM 
+                        INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+                    WHERE 
+                        TABLE_SCHEMA = '{db_name}' AND 
+                        TABLE_NAME = '{table_name}' AND 
+                        REFERENCED_TABLE_NAME IS NOT NULL
+                """)
+                fk_results = cursor.fetchall()
+                if fk_results:
+                    foreign_keys[table_name] = fk_results
+            except Exception as e:
+                print(f"Error fetching foreign keys for {table_name}: {str(e)}")
     except Exception as e:
+        print(f"Error in schema view: {str(e)}")
         schema_details = {}
 
-    # Build schema text for Groq prompt
+    # Build schema text for Groq prompt (keeping this unchanged)
     schema_text = f"Schema for Database: {db_name}\n"
     for table, columns in schema_details.items():
         schema_text += table + "\n"
@@ -40,7 +77,7 @@ def schema(db_name):
             schema_text += f"{col[0]} - {col[1]}{annotation}\n"
         schema_text += "\n"
 
-    # Define prompt messages with instructions and schema text.
+    # Define prompt messages with instructions and schema text (keeping this unchanged)
     messages = [
         {
             "role": "system",
@@ -113,7 +150,22 @@ def schema(db_name):
         mermaid_diagram = mermaid_diagram[3:-3].strip()
     print("Schema input:", schema_text)         # <-- Print input on terminal
     print("Mermaid diagram response:", mermaid_diagram)  # <-- Print response on terminal
-    return render_template('view_schema.html', db_name=db_name, schema_details=schema_details, mermaid_diagram=mermaid_diagram)
+    
+    # Additional metadata for enhanced UI
+    schema_metadata = {
+        'table_count': table_count,
+        'column_count': column_count,
+        'primary_keys': primary_keys,
+        'foreign_keys': foreign_keys
+    }
+    
+    return render_template(
+        'view_schema.html', 
+        db_name=db_name, 
+        schema_details=schema_details, 
+        schema_metadata=schema_metadata,
+        mermaid_diagram=mermaid_diagram
+    )
 
 @schema_bp.route('/er_diagram/<db_name>')
 def er_diagram(db_name):
