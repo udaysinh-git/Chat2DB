@@ -8,7 +8,14 @@
     <div class="center-container" id="container">
         <!-- Added a card container for better layout -->
         <div class="card">
-            <h1>Create Database</h1>
+            <!-- Flex container for animation and heading -->
+            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                <iframe src="https://lottie.host/embed/0bce3c86-6827-41cd-98fb-371456710908/ucwyPPygVE.lottie"
+                        style="width: 60px; height: 60px; border: none; background: transparent;"
+                        allowfullscreen
+                        aria-label="Create Database Animation"></iframe>
+                <h1 style="margin: 0;">Create Database</h1>
+            </div>
             <form method="POST" hx-post="{{ url_for('create_database.create_database') }}" hx-target="#container">
                 <!-- Add inline margin-bottom for extra spacing -->
                 <div class="form-group" style="margin-bottom:20px;">
