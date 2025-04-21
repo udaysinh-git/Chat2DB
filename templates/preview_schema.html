@@ -43,10 +43,13 @@
         document.getElementById("regenerate-btn").addEventListener("click", function(){
             const description = document.getElementById("description-area").value; // Get current description
             const regenerateButton = document.getElementById("regenerate-btn");
-            
+            const mermaidContainer = document.getElementById("mermaid-diagram-container"); // Target the outer container
+            const mermaidId = 'mermaid-diagram-dynamic'; // Use a unique ID for rendering
+
             // Indicate loading
             regenerateButton.textContent = "Regenerating...";
             regenerateButton.disabled = true;
+            mermaidContainer.innerHTML = '<p>Loading diagram...</p>'; // Clear and show loading text
 
             // Send the description in the request body
             fetch("{{ url_for('create_database.regenerate_schema') }}", {
@@ -56,37 +59,48 @@
                 },
                 body: JSON.stringify({ description: description }) // Send description in body
             })
-            .then(response => response.json())
+            .then(response => {
+                 // Check if response is ok (status in the range 200-299)
+                 if (!response.ok) {
+                     // If not ok, throw an error to be caught by .catch()
+                     // Try to parse the error message from JSON response if possible
+                     return response.json().then(errData => {
+                         throw new Error(errData.message || `HTTP error! status: ${response.status}`);
+                     }).catch(() => {
+                         // If response is not JSON or parsing fails, throw generic error
+                         throw new Error(`HTTP error! status: ${response.status}`);
+                     });
+                 }
+                 return response.json(); // Parse JSON if response is ok
+             })
             .then(data => {
                 if(data.success) {
                     // Update SQL
                     document.getElementById("schema-sql").textContent = data.schema_sql;
                     
-                    // Update Mermaid Diagram
-                    const mermaidContainer = document.getElementById("mermaid-diagram-container");
-                    const mermaidDiv = document.getElementById("mermaid-diagram");
-                    
-                    // Clear previous diagram explicitly by removing the SVG element if it exists
-                    const existingSvg = mermaidContainer.querySelector('svg');
-                    if (existingSvg) {
-                        mermaidContainer.removeChild(existingSvg);
+                    // --- Update Mermaid Diagram using mermaid.render ---
+                    try {
+                        // mermaid.render(id, graphDefinition, callback, container)
+                        mermaid.render(mermaidId, data.mermaid, function(svgCode) {
+                            mermaidContainer.innerHTML = svgCode; // Insert the rendered SVG
+                        }, mermaidContainer);
+                    } catch (renderError) {
+                         console.error("Mermaid rendering error:", renderError);
+                         mermaidContainer.innerHTML = `<pre>Error rendering Mermaid diagram:\n${renderError}\n\nDiagram Code:\n${data.mermaid}</pre>`;
                     }
-                    
-                    // Update the content of the mermaid div
-                    mermaidDiv.innerHTML = data.mermaid; 
-                    // Remove the data-processed attribute to allow re-rendering
-                    mermaidDiv.removeAttribute('data-processed'); 
-                    
-                    // Re-initialize Mermaid for the updated div
-                    mermaid.init(undefined, mermaidDiv); 
 
                 } else {
+                    // Handle application-level errors reported by the server
                     alert("Error during regeneration: " + data.message);
+                     // Optionally display the failed diagram code if available
+                     mermaidContainer.innerHTML = `<pre>Regeneration failed.\n\nDiagram Code (if any):\n${data.mermaid || 'Not available'}</pre>`;
                 }
             })
             .catch(err => {
-                console.error("Error during regeneration fetch:", err);
-                alert("Error during regeneration fetch.");
+                // --- Log detailed fetch/network/parsing error ---
+                console.error("Error during regeneration fetch:", err); 
+                alert("Error during regeneration fetch: " + err.message); // Show specific error
+                mermaidContainer.innerHTML = `<p style="color: red;">Failed to fetch or process regeneration request.</p>`;
             })
             .finally(() => {
                  // Restore button state
