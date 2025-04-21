@@ -27,16 +27,34 @@ def create_database():
 
 @create_database_bp.route('/regenerate_schema', methods=['POST'])
 def regenerate_schema():
-    if 'pending_db' not in session or 'description' not in session['pending_db']:
-        return jsonify({'success': False, 'message': 'No description found in session.'})
-    description = session['pending_db']['description']
-    # Call renamed Groq model function to regenerate both SQL and Mermaid
-    schema_sql, mermaid = generate_sql_and_mermaid_from_description(description)
-    # Update session with the new schema and diagram
-    session['pending_db']['schema_sql'] = schema_sql
-    session['pending_db']['mermaid'] = mermaid
-    # Return both for the preview update
-    return jsonify({'success': True, 'schema_sql': schema_sql, 'mermaid': mermaid})
+    try: # Add try block here
+        # Get description from JSON request body
+        data = request.get_json()
+        if not data or 'description' not in data:
+             return jsonify({'success': False, 'message': 'Description not provided in request.'}), 400
+        
+        description = data['description'] # Use description from request
+
+        # Check if session exists, though we primarily use the request description now
+        if 'pending_db' not in session:
+            session['pending_db'] = {} # Initialize if needed
+
+        # Call renamed Groq model function to regenerate both SQL and Mermaid
+        schema_sql, mermaid = generate_sql_and_mermaid_from_description(description)
+        
+        # Update session with the new description, schema, and diagram
+        session['pending_db']['description'] = description # Store the *new* description
+        session['pending_db']['schema_sql'] = schema_sql
+        session['pending_db']['mermaid'] = mermaid
+        session.modified = True # Ensure session is saved
+
+        # Return both for the preview update
+        return jsonify({'success': True, 'schema_sql': schema_sql, 'mermaid': mermaid})
+
+    except Exception as e: # Catch any exception during the process
+        print(f"ERROR in /regenerate_schema: {e}") # Log the error server-side
+        # Return a JSON response indicating failure
+        return jsonify({'success': False, 'message': f'Server error during regeneration: {str(e)}'}), 500
 
 @create_database_bp.route('/finalize_database', methods=['POST'])
 def finalize_database():

@@ -74,10 +74,11 @@ MERMAID:
         print(content)
         print("----------------------------------------------------")
 
-        # --- Updated Regex ---
-        # Allow optional asterisks around the labels (e.g., **SQL:** or SQL:)
-        sql_match = re.search(r"\**SQL\**:\s*```(?:sql)?\s*([\s\S]+?)\s*```", content, re.IGNORECASE)
-        mermaid_match = re.search(r"\**MERMAID\**:\s*```(?:mermaid)?\s*([\s\S]+?)\s*```", content, re.IGNORECASE)
+        # --- Updated Regex (Attempt 3) ---
+        # Match variations like **SQL DDL Statements:** or SQL DDL Statements: etc.
+        sql_match = re.search(r"\**SQL(?: DDL Statements)?\**:\s*```(?:sql)?\s*([\s\S]+?)\s*```", content, re.IGNORECASE)
+        # Match variations like **Mermaid ER Diagram:** or Mermaid: etc.
+        mermaid_match = re.search(r"\**Mermaid(?: ER Diagram)?\**:\s*```(?:mermaid)?\s*([\s\S]+?)\s*```", content, re.IGNORECASE)
         
         schema_sql = sql_match.group(1).strip() if sql_match else ""
         mermaid = mermaid_match.group(1).strip() if mermaid_match else ""
@@ -89,9 +90,9 @@ MERMAID:
 
         # --- Fallback if parsing failed ---
         if not schema_sql:
-            schema_sql = "-- Failed to parse SQL from Groq response. --"
+            schema_sql = "-- Failed to parse SQL from Groq response. Check logs. --" 
         if not mermaid:
-            mermaid = "erDiagram\n  %% Failed to parse Mermaid diagram from Groq response. %%"
+            mermaid = "erDiagram\n  %% Failed to parse Mermaid diagram from Groq response. Check logs. %%" 
         
         # Basic cleanup for Mermaid (redundant if fallback used, but safe)
         if mermaid.startswith("erDiagram"):

@@ -8,39 +8,90 @@
 <body>
     <div class="center-container" id="container">
         <h1>Generated Database Schema</h1>
-        <h2>SQL DDL</h2>
-        <pre id="schema-sql">{{ schema_sql }}</pre>
+
+        <!-- Add Textarea for Description -->
+        <h2>Database Description</h2>
+        <textarea id="description-area" class="input-74" style="width: 100%; min-height: 100px;" 
+                  placeholder="Database description used for generation...">{{ session.get('pending_db', {}).get('description', '') }}</textarea>
+        
+        <h2 style="margin-top: 20px;">SQL DDL</h2>
+        <pre id="schema-sql" style="background-color: #f5f5f5; border: 1px solid #ddd; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word;">{{ schema_sql }}</pre>
 
         <h2>ER Diagram</h2>
-        <div id="mermaid-diagram" class="mermaid">{{ mermaid|safe }}</div>
+        <!-- Container for Mermaid diagram -->
+        <div id="mermaid-diagram-container" style="text-align: center; border: 1px solid #ddd; padding: 10px; border-radius: 4px; background-color: #fdfdfd;">
+             <div class="mermaid" id="mermaid-diagram">{{ mermaid|safe }}</div>
+        </div>
+
+        <!-- Error display area -->
+        {% if error %}
+            <div style="color: red; margin-top: 15px;">Error creating database: {{ error }}</div>
+        {% endif %}
 
         <div class="button-group" style="display:flex; justify-content: space-between; width:100%; margin-top:20px;">
-            <button class="button-74" id="regenerate-btn" type="button">Regenerate</button>
+            <!-- Update Regenerate button -->
+            <button class="button-74" id="regenerate-btn" type="button">Regenerate from Description</button>
             <form method="POST" action="{{ url_for('create_database.finalize_database') }}" hx-no-boost>
                 <button class="button-74" type="submit">Create Database</button>
             </form>
         </div>
     </div>
     <script>
+        // Initialize Mermaid on initial load
         mermaid.initialize({ startOnLoad: true });
+
         document.getElementById("regenerate-btn").addEventListener("click", function(){
+            const description = document.getElementById("description-area").value; // Get current description
+            const regenerateButton = document.getElementById("regenerate-btn");
+            
+            // Indicate loading
+            regenerateButton.textContent = "Regenerating...";
+            regenerateButton.disabled = true;
+
+            // Send the description in the request body
             fetch("{{ url_for('create_database.regenerate_schema') }}", {
                 method: "POST",
-                headers: {"Content-Type": "application/json"}
+                headers: {
+                    "Content-Type": "application/json" // Send as JSON
+                },
+                body: JSON.stringify({ description: description }) // Send description in body
             })
             .then(response => response.json())
             .then(data => {
                 if(data.success) {
+                    // Update SQL
                     document.getElementById("schema-sql").textContent = data.schema_sql;
-                    document.getElementById("mermaid-diagram").innerHTML = data.mermaid;
-                    mermaid.init(undefined, document.querySelectorAll(".mermaid"));
+                    
+                    // Update Mermaid Diagram
+                    const mermaidContainer = document.getElementById("mermaid-diagram-container");
+                    const mermaidDiv = document.getElementById("mermaid-diagram");
+                    
+                    // Clear previous diagram explicitly by removing the SVG element if it exists
+                    const existingSvg = mermaidContainer.querySelector('svg');
+                    if (existingSvg) {
+                        mermaidContainer.removeChild(existingSvg);
+                    }
+                    
+                    // Update the content of the mermaid div
+                    mermaidDiv.innerHTML = data.mermaid; 
+                    // Remove the data-processed attribute to allow re-rendering
+                    mermaidDiv.removeAttribute('data-processed'); 
+                    
+                    // Re-initialize Mermaid for the updated div
+                    mermaid.init(undefined, mermaidDiv); 
+
                 } else {
-                    alert("Error: " + data.message);
+                    alert("Error during regeneration: " + data.message);
                 }
             })
             .catch(err => {
-                console.error("Error during regeneration:", err);
-                alert("Error during regeneration.");
+                console.error("Error during regeneration fetch:", err);
+                alert("Error during regeneration fetch.");
+            })
+            .finally(() => {
+                 // Restore button state
+                regenerateButton.textContent = "Regenerate from Description";
+                regenerateButton.disabled = false;
             });
         });
     </script>
