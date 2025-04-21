@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Creating Database...</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 30px;
+            background-color: #4b6584;
+            text-align: center;
+            color: white;
+            line-height: 30px;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <h1>Creating Database: {{ db_name }}</h1>
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar">0%</div>
+        </div>
+    </div>
+    <script>
+        function updateProgress(percent) {
+            $('#progress-bar').css('width', percent + '%').text(percent + '%');
+        }
+        // Simulate progress until the AJAX call returns
+        var simulatedProgress = 0;
+        var interval = setInterval(function() {
+            if(simulatedProgress < 90) {
+                simulatedProgress += 10;
+                updateProgress(simulatedProgress);
+            }
+        }, 500);
+
+        $.ajax({
+            url: "{{ url_for('create_database.execute_finalize_database') }}",
+            type: "POST",
+            contentType: "application/json",
+            success: function(data) {
+                clearInterval(interval);
+                if(data.success) {
+                    updateProgress(100);
+                    setTimeout(function() {
+                        window.location.href = "{{ url_for('view_databases.view_databases') }}";
+                    }, 1000);
+                } else {
+                    alert("Error: " + data.message);
+                }
+            },
+            error: function(err) {
+                clearInterval(interval);
+                alert("Error creating database.");
+            }
+        });
+    </script>
+</body>
+</html>

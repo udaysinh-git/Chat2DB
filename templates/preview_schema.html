@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>Preview Database Schema</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+    <div class="center-container" id="container">
+        <h1>Generated Database Schema</h1>
+        <h2>SQL DDL</h2>
+        <pre id="schema-sql">{{ schema_sql }}</pre>
+
+        <h2>ER Diagram</h2>
+        <div id="mermaid-diagram" class="mermaid">{{ mermaid|safe }}</div>
+
+        <div class="button-group" style="display:flex; justify-content: space-between; width:100%; margin-top:20px;">
+            <button class="button-74" id="regenerate-btn" type="button">Regenerate</button>
+            <form method="POST" action="{{ url_for('create_database.finalize_database') }}" hx-no-boost>
+                <button class="button-74" type="submit">Create Database</button>
+            </form>
+        </div>
+    </div>
+    <script>
+        mermaid.initialize({ startOnLoad: true });
+        document.getElementById("regenerate-btn").addEventListener("click", function(){
+            fetch("{{ url_for('create_database.regenerate_schema') }}", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"}
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById("schema-sql").textContent = data.schema_sql;
+                    document.getElementById("mermaid-diagram").innerHTML = data.mermaid;
+                    mermaid.init(undefined, document.querySelectorAll(".mermaid"));
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(err => {
+                console.error("Error during regeneration:", err);
+                alert("Error during regeneration.");
+            });
+        });
+    </script>
+</body>
+</html>

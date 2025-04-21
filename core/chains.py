@@ -28,7 +28,7 @@ def get_sql_chain(db):
     SQL Query:
     """
     prompt = ChatPromptTemplate.from_template(template)
-    llm = ChatGroq(model="qwen-2.5-coder-32b", temperature=0)
+    llm = ChatGroq(model="qwen-qwq-32b", temperature=0)
     def get_schema(_):
         return db.get_table_info()
     return (
